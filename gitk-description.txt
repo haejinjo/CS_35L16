@@ -1,0 +1,16 @@
+gitk-description.txt
+
+HW4 DESCRIPTION OF THE gitk WINDOW SUBWINDOW ROLES 
+
+The newest (but not newer than January 25 2015) commit was that of Joakim Verona. 
+In the subwindows we see a long history of all the past commits organized in
+a tree, comprised of the HEAD and its various sub branches. 
+
+Next to it, there is a list of each of hte commits' creators with their emails 
+in arrow brackets adjacent. 
+
+Nex tto that, a corresponding list of creation dates of the commits. 
+
+Below, a more in-detail description of the currently selected commit
+including information on Parent/Child nodes as well as the information
+on creator and any comments. 
