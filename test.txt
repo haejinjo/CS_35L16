@@ -1,0 +1,7 @@
+hello this is a test
+im going to push this to github
+the commands will be:
+
+git add .
+git commit -m "commit message here"
+git push origin master
