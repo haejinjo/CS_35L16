@@ -1,0 +1,307 @@
+LAB 6: BUFFERED vs. UNBUFFERED I/O
+
+In this lab, we implement our own versions of tr, a standard transliteration program, and call them
+tr2b (uses buffered I/O) and tr2u (uses unbuffered I/O) to compare their resulting implementations and
+performances.
+
+I created two files tr2b.c and tr2u.c. The two are implemented almost exactly the same (that is,
+reading a character from stdin one at a time, translating to the character or set of characters
+specified in the second argument if any given char in the file matches with the first).
+
+The main difference is that the former uses C library functions getchar() and putchar() that, by their
+implementations, automatically group a bunch of chars into a buffer with just one system call.
+Whereas the latter uses the  system calls read() and write() manually, limiting the buffer size of
+each call to 1 byte, which naturally makes it much slower and more tedious during execution.
+
+To see the evidence that compares these two methods (buffered vs. unbuffered), we create a file of
+at least 5MB. I chose to use 2 lines from one of my favorite songs and apply the following commands
+in the command line to copy them repeatedly into a file until it reached over 5,000,000 bytes.
+
+[classhae@lnxsrv04 ~/hw6]$ cat > file.txt
+Life's too short to even care at all, oh
+I'm losing my mind losing my mind losing control
+C-d
+
+[classhae@lnxsrv04 ~/hw6]$ for i in {1..16}; do cat file.txt file.txt > file2.txt && mv file2.txt file.txt; done
+
+*******COPYING ONE FILE TO ANOTHER******
+Now, using my large file.txt, I call the strace command first on a call to tr2b then on a call to tr2u
+on my 5MB file as it is copied onto test files btest.txt and utest.txt respectively. (To make sure
+that the copy was succesful, I called $ ls -l to check the byte size of the test files in comparison
+to my large file.txt. Twas a success).
+
+Below is the strace output for tr2b (truncated for practicality):
+
+[classhae@lnxsrv04 ~/hw6]$ strace ./tr2b 1 1 < file.txt > btest.txt
+execve("./tr2b", ["./tr2b", "1", "1"], [/* 32 vars */]) = 0
+brk(0)                                  = 0xc05000
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7fb1bdbc4000
+access("/etc/ld.so.preload", R_OK)      = -1 ENOENT (No such file or directory)
+open("/etc/ld.so.cache", O_RDONLY)      = 3
+fstat(3, {st_mode=S_IFREG|0644, st_size=177936, ...}) = 0
+mmap(NULL, 177936, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7fb1bdb98000
+close(3)                                = 0
+open("/lib64/libc.so.6", O_RDONLY)      = 3
+read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0000\356A\3753\0\0\0"..., 832) = 832
+fstat(3, {st_mode=S_IFREG|0755, st_size=1930416, ...}) = 0
+mmap(0x33fd400000, 3750184, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x33fd400000
+mprotect(0x33fd58a000, 2097152, PROT_NONE) = 0
+mprotect(0x33fd58a000, 2097152, PROT_NONE) = 0
+mmap(0x33fd78a000, 24576, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x18a000) = 0x33fd78a000
+mmap(0x33fd790000, 14632, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x33fd790000
+close(3)                                = 0
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7fb1bdb97000
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7fb1bdb96000
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7fb1bdb95000
+arch_prctl(ARCH_SET_FS, 0x7fb1bdb96700) = 0
+mprotect(0x33fd78a000, 16384, PROT_READ) = 0
+mprotect(0x33fd21f000, 8192, PROT_READ) = 0
+munmap(0x7fb1bdb98000, 177936)          = 0
+fstat(0, {st_mode=S_IFREG|0644, st_size=5832704, ...}) = 0
+mmap(NULL, 65536, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7fb1bdbb4000
+read(0, "Life's too short to even care at"..., 65536) = 65536
+fstat(1, {st_mode=S_IFREG|0644, st_size=0, ...}) = 0
+mmap(NULL, 65536, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7fb1bdba4000
+read(0, " all oh\nI'm losing my mind losin"..., 65536) = 65536
+write(1, "Life's too short to even care at"..., 65536) = 65536
+read(0, "g my mind losing control\nLife's "..., 65536) = 65536
+write(1, " all oh\nI'm losing my mind losin"..., 65536) = 65536
+read(0, "too short to even care at all oh"..., 65536) = 65536
+write(1, "g my mind losing control\nLife's "..., 65536) = 65536
+read(0, "\nI'm losing my mind losing my mi"..., 65536) = 65536
+write(1, "too short to even care at all oh"..., 65536) = 65536
+read(0, "nd losing control\nLife's too sho"..., 65536) = 65536
+write(1, "\nI'm losing my mind losing my mi"..., 65536) = 65536
+read(0, "rt to even care at all oh\nI'm lo"..., 65536) = 65536
+write(1, "nd losing control\nLife's too sho"..., 65536) = 65536
+read(0, "sing my mind losing my mind losi"..., 65536) = 65536
+write(1, "rt to even care at all oh\nI'm lo"..., 65536) = 65536
+read(0, "ng control\nLife's too short to e"..., 65536) = 65536
+write(1, "sing my mind losing my mind losi"..., 65536) = 65536
+read(0, "ven care at all oh\nI'm losing my"..., 65536) = 65536
+write(1, "ng control\nLife's too short to e"..., 65536) = 65536
+read(0, " mind losing my mind losing cont"..., 65536) = 65536
+write(1, "ven care at all oh\nI'm losing my"..., 65536) = 65536
+read(0, "rol\nLife's too short to even car"..., 65536) = 65536
+write(1, " mind losing my mind losing cont"..., 65536) = 65536
+read(0, "e at all oh\nI'm losing my mind l"..., 65536) = 65536
+write(1, "rol\nLife's too short to even car"..., 65536) = 65536
+read(0, "osing my mind losing control\nLif"..., 65536) = 65536
+write(1, "e at all oh\nI'm losing my mind l"..., 65536) = 65536
+read(0, "e's too short to even care at al"..., 65536) = 65536
+write(1, "osing my mind losing control\nLif"..., 65536) = 65536
+read(0, "l oh\nI'm losing my mind losing m"..., 65536) = 65536
+write(1, "e's too short to even care at al"..., 65536) = 65536
+read(0, "y mind losing control\nLife's too"..., 65536) = 65536
+write(1, "l oh\nI'm losing my mind losing m"..., 65536) = 65536
+read(0, " short to even care at all oh\nI'"..., 65536) = 65536
+write(1, "y mind losing control\nLife's too"..., 65536) = 65536
+read(0, "m losing my mind losing my mind "..., 65536) = 65536
+write(1, " short to even care at all oh\nI'"..., 65536) = 65536
+
+As we can see, the system calls made by getchar() and putchar() in tr2b are tailored to take in
+larger chunks of data (over 65 kilobytes at a time) which are then stored into a buffer to be
+written in a similar fashion.
+
+On the other hand, when we strace our call to tr2u...
+
+[classhae@lnxsrv04 ~/hw6]$ strace ./tr2u 1 1 < file.txt > utest.txt
+execve("./tr2u", ["./tr2u", "1", "1"], [/* 32 vars */]) = 0
+brk(0)                                  = 0xd5b000
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f991260e000
+access("/etc/ld.so.preload", R_OK)      = -1 ENOENT (No such file or directory)
+open("/etc/ld.so.cache", O_RDONLY)      = 3
+fstat(3, {st_mode=S_IFREG|0644, st_size=177936, ...}) = 0
+mmap(NULL, 177936, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f99125e2000
+close(3)                                = 0
+open("/lib64/libc.so.6", O_RDONLY)      = 3
+read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0000\356A\3753\0\0\0"..., 832) = 832
+fstat(3, {st_mode=S_IFREG|0755, st_size=1930416, ...}) = 0
+mmap(0x33fd400000, 3750184, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x33fd400000
+mprotect(0x33fd58a000, 2097152, PROT_NONE) = 0
+mmap(0x33fd78a000, 24576, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x18a000) = 0x33fd78a000
+mmap(0x33fd790000, 14632, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x33fd790000
+close(3)                                = 0
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f99125e1000
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f99125e0000
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f99125df000
+arch_prctl(ARCH_SET_FS, 0x7f99125e0700) = 0
+mprotect(0x33fd78a000, 16384, PROT_READ) = 0
+mprotect(0x33fd21f000, 8192, PROT_READ) = 0
+munmap(0x7f99125e2000, 177936)          = 0
+read(0, "L", 1)                         = 1
+write(1, "L", 1)                        = 1
+read(0, "i", 1)                         = 1
+write(1, "i", 1)                        = 1
+read(0, "f", 1)                         = 1
+write(1, "f", 1)                        = 1
+read(0, "e", 1)                         = 1
+write(1, "e", 1)                        = 1
+read(0, "'", 1)                         = 1
+write(1, "'", 1)                        = 1
+read(0, "s", 1)                         = 1
+write(1, "s", 1)                        = 1
+read(0, " ", 1)                         = 1
+write(1, " ", 1)                        = 1
+read(0, "t", 1)                         = 1
+
+Above, is ONE copy of the two lines of lyrics I originally entered in stdin. It shows to be use least 2 times as many system calls
+as tr2b did due to the fact that each one only reads and write 1 byte at a time rather than storing larger groups into a buffer
+in between.
+
+
+*******COPYING ONE FILE TO TERMINAL******
+
+When comparing the number of system calls between tr2b and tr2u we see the same pattern. tr2u's strace list of calls is clearly
+much longer than tr2b. However, both sets of system calls resulted in longer lists than when we copy to a file rather than
+stdout because more system calls are needed to be able to print to the screen. Below are the tr2b and tr2u strace reports
+respectively. (truncated for readability)
+
+[classhae@lnxsrv05 ~/hw6]$ strace ./tr2b 1 1 < file.txt
+execve("./tr2b", ["./tr2b", "1", "1"], [/* 32 vars */]) = 0
+brk(0)                                  = 0x909000
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9515885000
+access("/etc/ld.so.preload", R_OK)      = -1 ENOENT (No such file or directory)
+open("/etc/ld.so.cache", O_RDONLY)      = 3
+fstat(3, {st_mode=S_IFREG|0644, st_size=156446, ...}) = 0
+mmap(NULL, 156446, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f951585e000
+close(3)                                = 0
+open("/lib64/libc.so.6", O_RDONLY)      = 3
+read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0000\356\30132\0\0\0"..., 832) = 832
+fstat(3, {st_mode=S_IFREG|0755, st_size=1930416, ...}) = 0
+mmap(0x3233c00000, 3750184, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x3233c00000
+mprotect(0x3233d8a000, 2097152, PROT_NONE) = 0
+mmap(0x3233f8a000, 24576, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x18a000) = 0x3233f8a000
+mmap(0x3233f90000, 14632, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x3233f90000
+close(3)      
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f951585d000
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f951585c000
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f951585b000
+arch_prctl(ARCH_SET_FS, 0x7f951585c700) = 0
+mprotect(0x3233f8a000, 16384, PROT_READ) = 0
+mprotect(0x3233a1f000, 8192, PROT_READ) = 0
+munmap(0x7f951585e000, 156446)          = 0
+fstat(0, {st_mode=S_IFREG|0644, st_size=5832704, ...}) = 0
+mmap(NULL, 65536, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9515875000
+read(0, "Life's too short to even care at"..., 65536) = 65536
+fstat(1, {st_mode=S_IFCHR|0620, st_rdev=makedev(136, 7), ...}) = 0
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9515874000
+write(1, "Life's too short to even care at"..., 40Life's too short to even care at all oh
+) = 40
+write(1, "I'm losing my mind losing my min"..., 49I'm losing my mind losing my mind losing control
+) = 49
+write(1, "Life's too short to even care at"..., 40Life's too short to even care at all oh
+) = 40
+write(1, "I'm losing my mind losing my min"..., 49I'm losing my mind losing my mind losing control
+) = 49
+write(1, "Life's too short to even care at"..., 40Life's too short to even care at all oh
+) = 40
+write(1, "I'm losing my mind losing my min"..., 49I'm losing my mind losing my mind losing control
+) = 49
+write(1, "Life's too short to even care at"..., 40Life's too short to even care at all oh
+) = 40
+write(1, "I'm losing my mind losing my min"..., 49I'm losing my mind losing my mind losing control
+) = 49
+write(1, "Life's too short to even care at"..., 40Life's too short to even care at all oh
+) = 40
+write(1, "I'm losing my mind losing my min"..., 49I'm losing my mind losing my mind losing control
+) = 49
+write(1, "Life's too short to even care at"..., 40Life's too short to even care at all oh
+) = 40
+write(1, "I'm losing my mind losing my min"..., 49I'm losing my mind losing my mind losing control
+) = 49
+write(1, "Life's too short to even care at"..., 40Life's too short to even care at all oh
+) = 40
+write(1, "I'm losing my mind losing my min"..., 49I'm losing my mind losing my mind losing control
+) = 49
+write(1, "Life's too short to even care at"..., 40Life's too short to even care at all oh
+) = 40
+write(1, "I'm losing my mind losing my min"..., 49I'm losing my mind losing my mind losing control
+) = 49
+write(1, "Life's too short to even care at"..., 40Life's too short to even care at all oh
+) = 40
+write(1, "I'm losing my mind losing my min"..., 49I'm losing my mind losing my mind losing control
+) = 49
+write(1, "Life's too short to even care at"..., 40Life's too short to even care at all oh
+) = 40
+write(1, "I'm losing my mind losing my min"..., 49I'm losing my mind losing my mind losing control
+) = 49
+
+[classhae@lnxsrv05 ~/hw6]$ strace ./tr2u 1 1 < file.txt
+execve("./tr2u", ["./tr2u", "1", "1"], [/* 32 vars */]) = 0
+brk(0)                                  = 0x8a6000
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f4926b31000
+access("/etc/ld.so.preload", R_OK)      = -1 ENOENT (No such file or directory)
+open("/etc/ld.so.cache", O_RDONLY)      = 3
+fstat(3, {st_mode=S_IFREG|0644, st_size=156446, ...}) = 0
+mmap(NULL, 156446, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f4926b0a000
+close(3)                                = 0
+open("/lib64/libc.so.6", O_RDONLY)      = 3
+read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0000\356\30132\0\0\0"..., 832) = 832
+fstat(3, {st_mode=S_IFREG|0755, st_size=1930416, ...}) = 0
+mmap(0x3233c00000, 3750184, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x3233c00000
+mprotect(0x3233d8a000, 2097152, PROT_NONE) = 0
+mmap(0x3233f8a000, 24576, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x18a000) = 0x3233f8a000
+mmap(0x3233f90000, 14632, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x3233f90000
+close(3)                                = 0
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f4926b09000
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f4926b08000
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f4926b07000
+arch_prctl(ARCH_SET_FS, 0x7f4926b08700) = 0
+mprotect(0x3233f8a000, 16384, PROT_READ) = 0
+mprotect(0x3233a1f000, 8192, PROT_READ) = 0
+munmap(0x7f4926b0a000, 156446)          = 0
+read(0, "L", 1)                         = 1
+write(1, "L", 1L)                        = 1
+read(0, "i", 1)                         = 1
+write(1, "i", 1i)                        = 1
+read(0, "f", 1)                         = 1
+write(1, "f", 1f)                        = 1
+read(0, "e", 1)                         = 1
+write(1, "e", 1e)                        = 1
+read(0, "'", 1)                         = 1
+write(1, "'", 1')                        = 1
+read(0, "s", 1)                         = 1
+write(1, "s", 1s)                        = 1
+read(0, " ", 1)                         = 1
+write(1, " ", 1 )                        = 1
+read(0, "t", 1)                         = 1
+write(1, "t", 1t)                        = 1
+read(0, "o", 1)                         = 1
+write(1, "o", 1o)                        = 1
+read(0, "o", 1)                         = 1
+write(1, "o", 1o)                        = 1
+read(0, " ", 1)                         = 1
+...
+read(0, " ", 1)                         = 1
+write(1, " ", 1 )                        = 1
+read(0, "a", 1)                         = 1
+write(1, "a", 1a)                        = 1
+read(0, "l", 1)                         = 1
+write(1, "l", 1l)                        = 1
+read(0, "l", 1)                         = 1
+write(1, "l", 1l)                        = 1
+read(0, " ", 1)                         = 1
+write(1, " ", 1 )                        = 1
+read(0, "o", 1)                         = 1
+write(1, "o", 1o)                        = 1
+read(0, "h", 1)                         = 1
+write(1, "h", 1h)                        = 1
+read(0, "\n", 1)                        = 1
+write(1, "\n", 1
+)                       = 1
+
+To solidify my opinion, I use time command to quantifiably compare the times of buffered vs. unbuffered I/O.
+[classhae@lnxsrv05 ~/hw6]$ time ./tr2b 1 1 < file.txt
+tr2u on the 5MB file took....
+real 0m4.819s
+user 0m0.363s
+sys  0m0.342s
+
+[classhae@lnxsrv05 ~/hw6]$ time ./tr2u 1 1 < file.txt
+tr2b on the 5MB file took....
+real 0m7.800s
+user 0m0.382s
+sys  0m7.411s
+
+A noticeable difference, especially during the system call time.
