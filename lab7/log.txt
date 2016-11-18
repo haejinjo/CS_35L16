@@ -1,0 +1,55 @@
+I run the command
+
+$ sort --version
+
+in order to check if I have a new enough version of GNU sort. This is the message I get:
+****
+sort (GNU coreutils) 8.4
+Copyright (C) 2010 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+Written by Mike Haertel and Paul Eggert.
+****
+
+I seem to have an older version than 8.6, but I specifically chose this coreutils file for being 8.6, released 2010-10-15, which is strange.
+
+I create a script, generate20mfile.sh, containing the following commands in order to generate a list of 10,000,000 double-precision floating point numbers with standard\
+ input taken from /dev/urandom, formatted to be one per line with no white space:
+
+od -An -t f8 -N 80000000 </dev/urandom | tr -s "[:blank:]" "\n" > 10milnums.txt
+
+Note: 80,000,000 is an argument passed into the N option which dictates how many bytes of memory should be generated in the file. Since we want 10 million double-precis\
+ion floating point numbers, we must multiply by 8.
+
+Execute it, thereby creating the file 10milnums.txt:
+$ ./generate10mfile.sh
+
+My next task is to use 10milnums.txt to record the perofrmance time of the default installed sort command,
+[classhae@lnxsrv05 ~/hw7]$ time -p sort -g 10milnums.txt > /dev/null
+real 178.93
+user 175.17
+sys 0.25
+
+[classhae@lnxsrv07 ~/hw7]$ time -p sort -g --parallel 1 10milnums.txt > /dev/null
+real 183.21
+user 182.86
+sys 0.34
+
+[classhae@lnxsrv07 ~/hw7]$ time -p sort -g --parallel 2 10milnums.txt > /dev/null
+real 99.38
+user 190.23
+sys 0.39
+
+[classhae@lnxsrv07 ~/hw7]$ time -p sort -g --parallel 4 10milnums.txt > /dev/null
+real 56.09
+user 193.16
+sys 0.47
+[classhae@lnxsrv07 ~/hw7]$ time -p sort -g --parallel 8 10milnums.txt > /dev/null
+real 35.48
+user 197.56
+sys 0.55
+
+NOTE: the --parallel option did not work unless on LINUX srver 07. Not sure if it had to do with the PATH environment variable being set improperly so that /usr/local/c\
+s/bin was not at its start...
